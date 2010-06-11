@@ -1,0 +1,10 @@
+.DS_Store
+*.cache
+*.log
+*.jar
+*.dylib
+*.jnilib
+*.o
+a.out
+*.class
+config.status

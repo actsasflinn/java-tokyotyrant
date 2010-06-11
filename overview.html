@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+<meta http-equiv="Content-Language" content="en" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="Content-Style-Type" content="text/css" />
+<meta name="author" content="Mikio Hirabayashi" />
+<meta name="keywords" content="Tokyo Tyrant, Java" />
+<meta name="description" content="API specifications of Java binding" />
+<link rel="contents" href="./" />
+<link rev="made" href="mailto:mikio@users.sourceforge.net" />
+<title>Java Binding of Tokyo Tyrant</title>
+</head>
+
+<body>
+
+<h1>Java Binding of Tokyo Tyrant.</h1>
+
+<div>Tokyo Tyrant is a modern implementation of DBM.</div>
+
+<h2>Introduction</h2>
+
+<p>Tokyo Tyrant is a library of routines for managing a database.  The database is a simple data file containing records, each is a pair of a key and a value.  Every key and value is serial bytes with variable length.  Both binary data and character string can be used as a key and a value.  There is neither concept of data tables nor data types.  Records are organized in hash table, B+ tree, or fixed-length array.</p>
+
+<p>As for database of hash table, each key must be unique within a database, so it is impossible to store two or more records with a key overlaps.  The following access methods are provided to the database: storing a record with a key and a value, deleting a record by a key, retrieving a record by a key.  Moreover, traversal access to every key are provided, although the order is arbitrary.  These access methods are similar to ones of DBM (or its followers: NDBM and GDBM) library defined in the UNIX standard.  Tokyo Tyrant is an alternative for DBM because of its higher performance.</p>
+
+<p>As for database of B+ tree, records whose keys are duplicated can be stored.  Access methods of storing, deleting, and retrieving are provided as with the database of hash table.  Records are stored in order by a comparison function assigned by a user.  It is possible to access each record with the cursor in ascending or descending order.  According to this mechanism, forward matching search for strings and range search for integers are realized.</p>
+
+<p>As for database of fixed-length array, records are stored with unique natural numbers.  It is impossible to store two or more records with a key overlaps.  Moreover, the length of each record is limited by the specified length.  Provided operations are the same as ones of hash database.</p>
+
+<p>Table database is also provided as a variant of hash database.  Each record is identified by the primary key and has a set of named columns.  Although there is no concept of data schema, it is possible to search for records with complex conditions efficiently by using indices of arbitrary columns.</p>
+
+<h2>Setting</h2>
+
+<p>Install the latest version of Tokyo Tyrant beforehand and get the package of the Java binding of Tokyo Tyrant.</p>
+
+<p>Enter the directory of the extracted package then perform installation.</p>
+
+<pre style="margin: 0em 0.8em; padding: 0.3em; background: #eeeeff none; border: 1px solid #cccccc; font-size: 90%;">./configure
+make
+make check
+su
+make install
+</pre>
+
+<p>When a series of work finishes, the JAR file `tokyotyrant.jar' and the shared object files `libjtokyotyrant.so' and so on are installed under `/usr/local/lib'.</p>
+
+<p>Let the class search path include `/usr/local/lib/tokyotyrant.jar' and let the library search path include `/usr/local/lib'.</p>
+
+<pre style="margin: 0em 0.8em; padding: 0.3em; background: #eeeeff none; border: 1px solid #cccccc; font-size: 90%;">CLASSPATH="$CLASSPATH:/usr/local/lib/tokyotyrant.jar"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib"
+export CLASSPATH LD_LIBRARY_PATH
+</pre>
+
+<p>The above settings can be specified by options of the runtime command.</p>
+
+<pre style="margin: 0em 0.8em; padding: 0.3em; background: #eeeeff none; border: 1px solid #cccccc; font-size: 90%;">java -cp tokyotyrant.jar -Djava.library.path=. FooBarBaz ...
+</pre>
+
+<p>All symbols of Tokyo Tyrant are defined in the package `tokyotyrant'.  You can access them without any prefix by importing the package.</p>
+
+<pre style="margin: 0em 0.8em; padding: 0.3em; background: #eeeeff none; border: 1px solid #cccccc; font-size: 90%;">import tokyotyrant.*;
+</pre>
+
+<h2>Example</h2>
+
+<p>The following code is an example to use a table database.</p>
+
+<pre style="margin: 0em 0.8em; padding: 0.3em; background: #eeeeff none; border: 1px solid #cccccc; font-size: 90%;">import tokyotyrant.*;
+import java.util.*;
+
+public class TCRDBEX {
+  public static void main(String[] args){
+
+    // create the object
+    TCRDB tdb = new TCRDB();
+
+    // open the database
+    if(!tdb.open("127.0.0.1", 1978)){
+      int ecode = tdb.ecode();
+      System.err.println("open error: " + tdb.errmsg(ecode));
+    }
+
+    // store a record
+    String pkey = new Long(tdb.genuid()).toString();
+    Map cols = new HashMap();
+    cols.put("name", "mikio");
+    cols.put("age", "30");
+    cols.put("lang", "ja,en,c");
+    if(!tdb.put(pkey, cols)){
+      int ecode = tdb.ecode();
+      System.err.println("put error: " + tdb.errmsg(ecode));
+    }
+
+    // store another record
+    cols = new HashMap();
+    cols.put("name", "falcon");
+    cols.put("age", "31");
+    cols.put("lang", "ja");
+    cols.put("skill", "cook,blog");
+    if(!tdb.put("x12345", cols)){
+      int ecode = tdb.ecode();
+      System.err.println("put error: " + tdb.errmsg(ecode));
+    }
+
+    // search for records
+    RDBQRY qry = new RDBQRY(tdb);
+    qry.addcond("age", RDBQRY.QCNUMGE, "20");
+    qry.addcond("lang", RDBQRY.QCSTROR, "ja,en");
+    qry.setorder("name", RDBQRY.QOSTRASC);
+    qry.setlimit(10, 0);
+    List res = qry.search();
+    Iterator it = res.iterator();
+    while(it.hasNext()){
+      String rkey = new String((byte[])it.next());
+      Map rcols = tdb.get(rkey);
+      System.out.println("name:" + rcols.get("name"));
+    }
+
+    // close the database
+    if(!tdb.close()){
+      int ecode = tdb.ecode();
+      System.err.println("close error: " + tdb.errmsg(ecode));
+    }
+
+  }
+}
+</pre>
+
+<h2>License</h2>
+
+<div>Copyright (C) 2010 Flinn Mueller</div>
+<div>Copyright (C) 2006-2009 Mikio Hirabayashi</div>
+
+<p>The Java binding of Tokyo Tyrant is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 2.1 of the License or any later version.  The Java binding of Tokyo Tyrant is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.  You should have received a copy of the GNU Lesser General Public License along with the Java binding of Tokyo Tyrant; if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.</p>
+
+</body>
+
+</html>
