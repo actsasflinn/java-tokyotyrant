@@ -7,7 +7,7 @@
 #================================================================
 
 # Package name
-AC_INIT(tokyotyrant-java, 0.1)
+AC_INIT(java-tokyotyrant, 0.1)
 
 # Package information
 MYLIBVER=1

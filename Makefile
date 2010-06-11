@@ -11,7 +11,7 @@
 SHELL = /bin/sh
 
 # Package information
-PACKAGE = tokyotyrant-java
+PACKAGE = java-tokyotyrant
 VERSION = 0.1
 PACKAGEDIR = $(PACKAGE)-$(VERSION)
 PACKAGETGZ = $(PACKAGE)-$(VERSION).tar.gz
